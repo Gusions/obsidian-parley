@@ -23,9 +23,10 @@ Chat exports are a pile of `.txt` files and loose media. Parley turns them back 
 - **Lazy zip reader**: opens large archives instantly and extracts media only when it scrolls into view.
 - **Messages-style reader**: bubbles, day separators, a floating date chip while you scroll, windowed rendering for very long chats.
 - **Media**: photos, video, audio and voice notes, documents, links, with a lightbox (arrow keys to move through).
-- **Gallery** with separate tabs: Photos and video, GIFs and stickers, Documents, Links.
+- **Gallery** with separate tabs (Photos and video, GIFs and stickers, Documents, Links); photos are sorted newest first and grouped by month.
 - **Search** inside a chat (`Cmd/Ctrl+F`) and jump to a date.
-- **Library folders**: add a folder full of exports (zips and plain folders mixed); duplicates of the same chat are merged.
+- **Library folders**: add a folder full of exports (zips, plain folders, or a folder containing a zip, all mixed); each chat gets a card named after its folder, and duplicates of the same chat are merged.
+- Messages are always shown in chronological order.
 - **Home** with your library folders and recent chats, pick "which one am I" per chat.
 - Light and dark, follows your Obsidian theme.
 
@@ -51,7 +52,12 @@ Parley is desktop only (Obsidian 1.5.0 or newer).
 
 ## Usage
 
-Run **Parley: Open** (command palette) or click the ribbon icon. Use **+** to add a chat (folder or zip) or a whole library folder.
+Run the command **Apri Parley** (the interface is in Italian for now) or click the ribbon icon. The **+** button on the home offers:
+
+- **Aggiungi cartella di export…**: add a folder that holds many chats (a library). Opening such a folder with **Apri cartella…** does the same.
+- **Apri cartella…** / **Apri file zip…**: open a single chat.
+
+Click **Aggiorna** on a library to rescan it, **Rimuovi** to stop showing it (files are never touched).
 
 | Shortcut | Action |
 | --- | --- |
