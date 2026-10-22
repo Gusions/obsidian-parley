@@ -212,8 +212,8 @@ body.theme-dark .pl .pl-tabs button.on { background: color-mix(in srgb, var(--te
 .pl-home button:focus-visible, .pl-home .pl-card:focus-visible { outline: 2px solid color-mix(in srgb, var(--interactive-accent) 70%, transparent); outline-offset: -2px; }
 .pl-home svg { width: 15px; height: 15px; display: block; flex: none; stroke-width: 1.6; }
 .pl-home .pl-bar { position: sticky; top: 0; z-index: 5; margin: 0 -20px; padding: 28px 20px 10px; background: color-mix(in srgb, var(--background-primary) 80%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
-.pl-home .pl-bar-row { position: relative; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.pl-home .pl-brand { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: -.022em; }
+.pl-home .pl-bar-row { position: relative; display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.pl-home .pl-brand { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: .01em; }
 .pl-home .pl-logo, .pl-home .pl-logo svg { width: 26px; height: 26px; }
 .pl-home .pl-logo-bg { fill: var(--text-normal); }
 .pl-home .pl-logo-fg { stroke: var(--background-primary); }

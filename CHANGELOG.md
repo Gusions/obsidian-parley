@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.10
+- Home header: more breathing room (letter spacing of the title, gap after the logo, space before the search field).
+
 ## 0.4.9
 - Gallery: photos and videos are sorted by message date, newest first, grouped under month headings (hover a thumbnail for its date).
 
