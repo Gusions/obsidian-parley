@@ -51,6 +51,7 @@ var ic = function (n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="cur
 var tFmt = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' });
 var dLong = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 var dMed = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+var dMonth = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' });
 var dayKey = function (m) {
   if (m._dk === undefined) { var d = new Date(m.ts); m._dk = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   return m._dk;
@@ -639,9 +640,14 @@ function createReader(root, opts) {
     if (tab === 'media' || tab === 'anim') {
       var grid = tab === 'anim' ? data.anim : data.vis;
       if (!grid.length) { box.innerHTML = '<div class="pl-note">' + (tab === 'anim' ? 'Nessuna GIF o sticker in questa chat.' : 'Nessuna foto o video in questa chat.') + '</div>'; return; }
-      box.innerHTML = '<div class="pl-grid' + (tab === 'anim' ? ' pl-grid-anim' : '') + '">' + grid.slice().reverse().map(function (x) {
-        return '<div class="pl-th" data-i="' + x.i + '" data-k="' + x.k + '">' + (x.md.kind === 'image' ? '<img data-lazy-g alt="">' : ic('play')) + (x.md.kind === 'video' ? '<span class="vi">' + ic('play') + '</span>' : '') + '</div>';
-      }).join('') + '</div>';
+      /* dalla più recente alla più vecchia, con l'intestazione del mese come su Foto */
+      var ordered = grid.slice().sort(function (x, y) { return (c.messages[y.i].ts - c.messages[x.i].ts) || (y.i - x.i) || (y.k - x.k); }), lastMon = null, gh = '';
+      ordered.forEach(function (x) {
+        var dt = new Date(c.messages[x.i].ts), mon = dt.getFullYear() * 12 + dt.getMonth();
+        if (mon !== lastMon) { if (lastMon !== null) gh += '</div>'; gh += '<div class="pl-mon">' + esc(dMonth.format(dt)) + '</div><div class="pl-grid' + (tab === 'anim' ? ' pl-grid-anim' : '') + '">'; lastMon = mon; }
+        gh += '<div class="pl-th" title="' + esc(dMed.format(dt)) + '" data-i="' + x.i + '" data-k="' + x.k + '">' + (x.md.kind === 'image' ? '<img data-lazy-g alt="">' : ic('play')) + (x.md.kind === 'video' ? '<span class="vi">' + ic('play') + '</span>' : '') + '</div>';
+      });
+      box.innerHTML = gh + '</div>';
       var gio = new IntersectionObserver(function (ents) {
         ents.forEach(function (en) {
           if (!en.isIntersecting) return; gio.unobserve(en.target);

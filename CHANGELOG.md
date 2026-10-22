@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.9
+- Gallery: photos and videos are sorted by message date, newest first, grouped under month headings (hover a thumbnail for its date).
+
 ## 0.4.8
 - Messages (and therefore photos) are always shown in chronological order, even if the export lists them out of order.
 

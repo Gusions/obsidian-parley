@@ -153,6 +153,8 @@ body.theme-dark .pl .who { color: hsl(var(--h, 160) 45% 70%); }
 body.theme-dark .pl .pl-tabs button.on { background: color-mix(in srgb, var(--text-normal) 18%, var(--background-primary)); }
 .pl .pl-scroll { overflow-y: auto; padding: 16px 22px 22px; min-height: 180px; }
 .pl .pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 4px; }
+.pl .pl-mon { font-size: 13px; font-weight: 600; text-transform: capitalize; margin: 14px 2px 6px; color: var(--pl-muted); }
+.pl .pl-mon:first-child { margin-top: 2px; }
 .pl .pl-th { aspect-ratio: 1; background: var(--pl-hover); position: relative; cursor: pointer; overflow: hidden; display: grid; place-items: center; color: var(--pl-muted); border-radius: 10px; transition: transform .2s var(--pl-ease); }
 .pl .pl-th:hover { transform: scale(.97); }
 .pl .pl-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
