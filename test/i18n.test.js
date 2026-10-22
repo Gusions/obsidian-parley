@@ -1,0 +1,24 @@
+/* Controlla che ogni stringa passata a tr()/trn()/_t() abbia la traduzione inglese, e che non ci siano chiavi orfane. */
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const I18N = require('../src/i18n.js');
+const src = ['reader.js', 'main.js', 'parsers.js'].map((f) => fs.readFileSync(path.join(__dirname, '../src', f), 'utf8')).join('\n');
+const lit = "((?:'(?:[^'\\\\]|\\\\.)*'|\"(?:[^\"\\\\]|\\\\.)*\"))";
+const unq = (q) => Function('return ' + q)();
+const used = new Set();
+for (const m of src.matchAll(new RegExp('\\b(?:tr|_t)\\(' + lit, 'g'))) used.add(unq(m[1]));
+for (const m of src.matchAll(new RegExp('\\btrn\\([^,]+,\\s*' + lit + '\\s*,\\s*' + lit, 'g'))) used.add(unq(m[2]));
+const EN = I18N.LANGS.en;
+const missing = [...used].filter((k) => !(k in EN));
+assert.deepStrictEqual(missing, [], 'stringhe senza traduzione inglese: ' + JSON.stringify(missing));
+const orphan = Object.keys(EN).filter((k) => !used.has(k) && !/^(Lingua|Automatica|Lingua dell)/.test(k) && !src.includes(JSON.stringify(k).slice(1, -1)) && !src.includes("'" + k.replace(/'/g, "\\'") + "'"));
+assert.deepStrictEqual(orphan, [], 'traduzioni mai usate: ' + JSON.stringify(orphan));
+I18N.setLocale('en');
+assert.strictEqual(I18N.t('{0} di {1}', 2, 5), '2 of 5');
+assert.strictEqual(I18N.tn(1, '{0} messaggio', '{0} messaggi'), '1 message');
+assert.strictEqual(I18N.tn(1234, '{0} messaggio', '{0} messaggi'), '1,234 messages');
+I18N.setLocale('it');
+assert.strictEqual(I18N.tn(2, '{0} messaggio', '{0} messaggi'), '2 messaggi');
+assert.strictEqual(I18N.t('Chiudi'), 'Chiudi');
+console.log('✓ i18n: ' + used.size + ' stringhe tradotte, nessuna mancante');

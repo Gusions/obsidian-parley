@@ -200,28 +200,32 @@
   }
   function entitiesPlain(ents) { return ents.map(function (e) { return e.s; }).join(''); }
 
+  /* traduttore opzionale (le stringhe visibili nei messaggi di servizio): di default restituisce l'italiano */
+  var _t = function (k) { var a = Array.prototype.slice.call(arguments, 1); return a.length ? k.replace(/\{(\d+)\}/g, function (_, n) { return a[+n] == null ? '' : a[+n]; }) : k; };
+  function setTranslator(f) { _t = f || _t; }
+
   function tgService(m) {
     var who = m.actor || '', mem = (m.members || []).join(', '), a = m.action;
     switch (a) {
-      case 'create_group': return who + ' ha creato il gruppo «' + (m.title || '') + '»';
-      case 'create_channel': return 'Canale «' + (m.title || '') + '» creato';
-      case 'invite_members': return who + ' ha aggiunto ' + mem;
-      case 'remove_members': return who + ' ha rimosso ' + mem;
-      case 'join_group_by_link': return who + ' è entrato nel gruppo con il link';
-      case 'join_group_by_request': return who + ' è stato accettato nel gruppo';
-      case 'edit_group_title': return who + ' ha cambiato il nome del gruppo in «' + (m.title || '') + '»';
-      case 'edit_group_photo': return who + ' ha cambiato la foto del gruppo';
-      case 'delete_group_photo': return who + ' ha rimosso la foto del gruppo';
-      case 'pin_message': return who + ' ha fissato un messaggio';
+      case 'create_group': return _t('{0} ha creato il gruppo «{1}»', who, m.title || '');
+      case 'create_channel': return _t('Canale «{0}» creato', m.title || '');
+      case 'invite_members': return _t('{0} ha aggiunto {1}', who, mem);
+      case 'remove_members': return _t('{0} ha rimosso {1}', who, mem);
+      case 'join_group_by_link': return _t('{0} è entrato nel gruppo con il link', who);
+      case 'join_group_by_request': return _t('{0} è stato accettato nel gruppo', who);
+      case 'edit_group_title': return _t('{0} ha cambiato il nome del gruppo in «{1}»', who, m.title || '');
+      case 'edit_group_photo': return _t('{0} ha cambiato la foto del gruppo', who);
+      case 'delete_group_photo': return _t('{0} ha rimosso la foto del gruppo', who);
+      case 'pin_message': return _t('{0} ha fissato un messaggio', who);
       case 'migrate_to_supergroup':
-      case 'migrate_from_group': return 'Il gruppo è stato convertito in supergruppo';
-      case 'topic_created': return who + ' ha creato l\'argomento «' + (m.title || '') + '»';
+      case 'migrate_from_group': return _t('Il gruppo è stato convertito in supergruppo');
+      case 'topic_created': return _t('{0} ha creato l\'argomento «{1}»', who, m.title || '');
       case 'phone_call':
-        return '📞 Chiamata' + (m.discard_reason === 'missed' ? ' persa' : m.discard_reason === 'busy' ? ' rifiutata' : '') +
+        return (m.discard_reason === 'missed' ? _t('📞 Chiamata persa') : m.discard_reason === 'busy' ? _t('📞 Chiamata rifiutata') : _t('📞 Chiamata')) +
           (m.duration_seconds ? ' · ' + fmtDur(m.duration_seconds) : '');
-      case 'group_call': return '📞 Chiamata di gruppo' + (m.duration ? ' · ' + fmtDur(m.duration) : '');
-      case 'clear_history': return 'Cronologia cancellata';
-      default: return (who + ' · ' + (a || 'evento')).trim();
+      case 'group_call': return _t('📞 Chiamata di gruppo') + (m.duration ? ' · ' + fmtDur(m.duration) : '');
+      case 'clear_history': return _t('Cronologia cancellata');
+      default: return (who + ' · ' + (a || _t('evento'))).trim();
     }
   }
 
@@ -232,7 +236,7 @@
       out.system = true; out.from = null; out.text = tgService(m); out.plain = out.text;
       return out;
     }
-    out.from = m.from || m.actor || chatName || 'Sconosciuto';
+    out.from = m.from || m.actor || chatName || _t('Sconosciuto');
     out.fromId = m.from_id;
     var ents = tgEntities(m);
     var extra = [];
@@ -257,7 +261,7 @@
 
     var notIncluded = function (p) { return typeof p === 'string' && /^\(File (?:not included|exceeds)/i.test(p); };
     if (m.photo) {
-      out.media.push(notIncluded(m.photo) ? { kind: 'image', omitted: true, title: 'Foto non inclusa nell\'export' }
+      out.media.push(notIncluded(m.photo) ? { kind: 'image', omitted: true, title: _t('Foto non inclusa nell\'export') }
         : { kind: 'image', path: m.photo, name: baseName(m.photo), w: m.width, h: m.height });
     }
     if (m.file) {
@@ -269,7 +273,7 @@
       else if (mt === 'animation') { item.kind = 'video'; item.gif = true; }
       else if (mt === 'video_file') item.kind = 'video';
       else if (mt === 'audio_file') item.kind = 'audio';
-      if (notIncluded(m.file)) { item = { kind: item.kind, omitted: true, title: 'File non incluso nell\'export' }; }
+      if (notIncluded(m.file)) { item = { kind: item.kind, omitted: true, title: _t('File non incluso nell\'export') }; }
       out.media.push(item);
     }
     if (m.reply_to_message_id != null) out.replyTo = m.reply_to_message_id;
@@ -383,7 +387,7 @@
         var fromEl = body.querySelector(':scope > .from_name');
         var from = fromEl ? fromEl.textContent.trim() : lastFrom;
         if (from) lastFrom = from;
-        var msg = { id: id, ts: ts, from: from || name || 'Sconosciuto', system: false, media: [] };
+        var msg = { id: id, ts: ts, from: from || name || _t('Sconosciuto'), system: false, media: [] };
         var ents = [];
         var textEl = body.querySelector(':scope > .text, :scope > .forwarded .text');
         if (textEl) htmlToEntities(textEl, ents, null);
@@ -413,7 +417,7 @@
           });
           if (!hadLink) {
             var tt = wrap.querySelector('.title');
-            msg.media.push({ kind: htmlKindFromTitle(tt ? tt.textContent : ''), omitted: true, title: 'File non incluso nell\'export' });
+            msg.media.push({ kind: htmlKindFromTitle(tt ? tt.textContent : ''), omitted: true, title: _t('File non incluso nell\'export') });
           }
         }
         counts[msg.from] = (counts[msg.from] || 0) + 1;
@@ -429,6 +433,6 @@
   return {
     kindOf: kindOf, mimeOf: mimeOf, extOf: extOf, baseName: baseName, fmtDur: fmtDur,
     looksLikeWhatsApp: looksLikeWhatsApp, parseWhatsApp: parseWhatsApp, deriveWaName: deriveWaName,
-    parseTelegramJson: parseTelegramJson, parseTelegramHtml: parseTelegramHtml
+    parseTelegramJson: parseTelegramJson, parseTelegramHtml: parseTelegramHtml, setTranslator: setTranslator
   };
 });

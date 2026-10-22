@@ -2,7 +2,8 @@
    Legge zip o cartelle esportati da WhatsApp/Telegram direttamente dal disco: nel vault non viene creato né copiato nulla. */
 var VIEW_TYPE = 'parley-view';
 var HOME_TYPE = 'parley-home';
-var DEFAULTS = { me: {}, recent: [], libraries: [], meta: {} };
+var DEFAULTS = { me: {}, recent: [], libraries: [], meta: {}, lang: 'auto' };
+var tr = I18N.t, trn = I18N.tn;
 
 /* ---------- utilità ---------- */
 function escHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -177,16 +178,16 @@ class ChatView extends obsidian.ItemView {
   async load() {
     var s = this.vstate, self = this;
     this.teardown();
-    if (!s.source) { this.status('<div>Nessuna chat aperta. Scegline una dalla home di Parley.</div>'); return; }
-    var status = this.status('<div><div class="pl-spin"></div><div class="pl-msg">Apro ' + escHtml(path.basename(s.source)) + '…</div></div>');
+    if (!s.source) { this.status('<div>' + escHtml(tr('Nessuna chat aperta. Sceglila dalla home di Parley.')) + '</div>'); return; }
+    var status = this.status('<div><div class="pl-spin"></div><div class="pl-msg">' + escHtml(tr('Apro {0}…', path.basename(s.source))) + '</div></div>');
     var say = function (m) { var e = status.querySelector('.pl-msg'); if (e) e.textContent = m; };
     try {
       this.opened = await openSource(s.source);
       var chats = await Reader.detectChats(this.opened.src, this.plugin.meStore(), say);
       if (!chats.length) {
-        var seen = this.opened.src.entries.map(function (en) { return en.path; }), more = seen.length > 12 ? '\n… e altri ' + (seen.length - 12) : '';
+        var seen = this.opened.src.entries.map(function (en) { return en.path; }), more = seen.length > 12 ? '\n' + tr('… e altri {0}', seen.length - 12) : '';
         this.teardown();
-        this.status('<div><b>Non ho trovato chat WhatsApp o Telegram in:</b><pre>' + escHtml(s.source) + '</pre><b>Contenuto trovato (' + seen.length + ' file):</b><pre>' + escHtml(seen.slice(0, 12).join('\n') + more || '(vuoto)') + '</pre></div>');
+        this.status('<div><b>' + escHtml(tr('Non ho trovato chat WhatsApp o Telegram in:')) + '</b><pre>' + escHtml(s.source) + '</pre><b>' + escHtml(tr('Contenuto trovato ({0} file):', seen.length)) + '</b><pre>' + escHtml(seen.slice(0, 12).join('\n') + more || tr('(vuoto)')) + '</pre></div>');
         return;
       }
       this.plugin.remember(s.source, chats);
@@ -204,22 +205,19 @@ class ChatView extends obsidian.ItemView {
       this.leaf.updateHeader && this.leaf.updateHeader();
     } catch (err) {
       this.teardown();
-      var hint = err && err.code === 'ENOENT' ? 'Il file o la cartella non esiste più in questo percorso.' : (err && err.message || String(err));
-      this.status('<div><b>Impossibile aprire la sorgente</b><pre>' + escHtml(s.source) + '\n\n' + escHtml(hint) + '</pre></div>');
+      var hint = err && err.code === 'ENOENT' ? tr('Il file o la cartella non esiste più in questo percorso.') : (err && err.message || String(err));
+      this.status('<div><b>' + escHtml(tr('Non riesco ad aprire questa chat')) + '</b><pre>' + escHtml(s.source) + '\n\n' + escHtml(hint) + '</pre></div>');
     }
   }
 }
 
 /* ---------- vista: home ---------- */
-var DATE_D = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
-var DATE_Y = new Intl.DateTimeFormat('it-IT', { month: 'short', year: 'numeric' });
-var DATE_T = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' });
 function fmtWhen(ts) {
   if (!ts) return '';
   var d = new Date(ts), now = new Date();
-  if (d.toDateString() === now.toDateString()) return DATE_T.format(d);
-  if (d.getFullYear() === now.getFullYear()) return DATE_D.format(d);
-  return DATE_Y.format(d);
+  if (d.toDateString() === now.toDateString()) return I18N.dt('t').format(d);
+  if (d.getFullYear() === now.getFullYear()) return I18N.dt('dm').format(d);
+  return I18N.dt('my').format(d);
 }
 
 class HomeView extends obsidian.ItemView {
@@ -243,13 +241,13 @@ class HomeView extends obsidian.ItemView {
     logo.innerHTML = '<svg viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="58" class="pl-logo-bg"/><path d="M82 200V70h54a44 44 0 0 1 0 88h-22" fill="none" class="pl-logo-fg" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><path d="M114 158l30 34v-34z" class="pl-logo-fgf"/></svg>';
     el(brand, 'span', null, 'Parley');
     var add = el(row, 'button', 'pl-plus');
-    add.setAttribute('type', 'button'); add.setAttribute('aria-label', 'Aggiungi una chat'); add.title = 'Aggiungi una chat';
+    add.setAttribute('type', 'button'); add.setAttribute('aria-label', tr('Aggiungi una chat')); add.title = tr('Aggiungi una chat');
     iconEl(add, 'plus');
     add.addEventListener('click', function (e) { e.stopPropagation(); if (self.menu) self.closeMenu(); else self.openMenu(add); });
     var sw = el(bar, 'label', 'pl-searchwrap');
     iconEl(sw, 'search');
     var inp = el(sw, 'input', 'pl-search');
-    inp.type = 'text'; inp.placeholder = 'Cerca';
+    inp.type = 'text'; inp.placeholder = tr('Cerca');
     inp.value = this.filter;
     inp.addEventListener('input', function () { self.filter = inp.value; self.renderSections(); });
     this.input = inp;
@@ -266,10 +264,10 @@ class HomeView extends obsidian.ItemView {
       var b = el(m, 'button', 'pl-menu-i', label); b.setAttribute('type', 'button');
       b.addEventListener('click', function (e) { e.stopPropagation(); self.closeMenu(); fn(); });
     };
-    item('Apri file zip…', async function () { var p = await pickPath('file'); if (p) self.plugin.openPath(p, { here: true }); });
-    item('Apri cartella…', async function () { var p = await pickPath('dir'); if (p) self.plugin.openPath(p, { here: true }); });
+    item(tr('Apri file zip…'), async function () { var p = await pickPath('file'); if (p) self.plugin.openPath(p, { here: true }); });
+    item(tr('Apri cartella…'), async function () { var p = await pickPath('dir'); if (p) self.plugin.openPath(p, { here: true }); });
     el(m, 'div', 'pl-menu-sep');
-    item('Aggiungi cartella di export…', async function () { var p = await pickPath('dir'); if (p) await self.plugin.addLibrary(p); });
+    item(tr('Aggiungi cartella di export…'), async function () { var p = await pickPath('dir'); if (p) await self.plugin.addLibrary(p); });
     var off = function (e) { if (e.type === 'keydown' && e.key !== 'Escape') return; self.closeMenu(); };
     this.offMenu = off;
     setTimeout(function () { document.addEventListener('click', off); document.addEventListener('keydown', off); }, 0);
@@ -290,7 +288,7 @@ class HomeView extends obsidian.ItemView {
   }
   async rescan(lib, silent) {
     try { this.scans[lib] = { items: await scanLibrary(lib) }; }
-    catch (e) { this.scans[lib] = { items: [], error: e && e.code === 'ENOENT' ? 'Cartella non trovata' : (e && e.message || 'Errore') }; }
+    catch (e) { this.scans[lib] = { items: [], error: e && e.code === 'ENOENT' ? tr('Cartella non trovata') : (e && e.message || tr('Errore')) }; }
     if (!silent) this.renderSections();
   }
   render() { if (this.sections) this.renderSections(); }
@@ -301,14 +299,14 @@ class HomeView extends obsidian.ItemView {
     var parts = [];
     if (m && m.platform) {
       parts.push(m.platform === 'telegram' ? 'Telegram' : 'WhatsApp');
-      if (m.count) parts.push(m.count.toLocaleString('it-IT') + ' messaggi');
+      if (m.count) parts.push(trn(m.count, '{0} messaggio', '{0} messaggi'));
       if (m.first && m.last) {
         var a = new Date(m.first), b = new Date(m.last);
         parts.push(a.getFullYear() === b.getFullYear() ? String(a.getFullYear()) : a.getFullYear() + '–' + b.getFullYear());
       }
     } else {
-      parts.push(item.kind === 'zip' ? 'Zip' : item.kind === 'dir' ? 'Cartella' : 'File');
-      parts.push('non ancora aperta');
+      parts.push(item.kind === 'zip' ? tr('Zip') : item.kind === 'dir' ? tr('Cartella') : tr('File'));
+      parts.push(tr('da aprire'));
     }
     return { name: name, line: parts.join(' · '), when: fmtWhen((m && m.last) || item.ts) };
   }
@@ -326,15 +324,15 @@ class HomeView extends obsidian.ItemView {
     el(card, 'div', 'pl-card-av', (d.name.match(/[\p{L}\p{N}]/u) || ['?'])[0]);
     var body = el(card, 'div', 'pl-card-body');
     el(body, 'div', 'pl-card-name', d.name);
-    el(body, 'div', 'pl-card-meta', d.line + (item.alt && item.alt.length ? ' · +' + item.alt.length + ' copia' + (item.alt.length > 1 ? 'e' : '') : ''));
+    el(body, 'div', 'pl-card-meta', d.line + (item.alt && item.alt.length ? ' · ' + trn(item.alt.length, '+{0} copia', '+{0} copie') : ''));
     el(card, 'div', 'pl-card-when', d.when);
-    card.title = item.source + (item.alt && item.alt.length ? '\n\nAnche in:\n' + item.alt.join('\n') : '');
+    card.title = item.source + (item.alt && item.alt.length ? '\n\n' + tr('Anche in:') + '\n' + item.alt.join('\n') : '');
     var open = function () { self.plugin.openPath(item.source, { here: true }); };
     card.addEventListener('click', open);
     card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     if (removable) {
       var x = el(card, 'button', 'pl-card-x', '×');
-      x.setAttribute('type', 'button'); x.setAttribute('aria-label', 'Rimuovi dai recenti'); x.title = 'Rimuovi dai recenti';
+      x.setAttribute('type', 'button'); x.setAttribute('aria-label', tr('Rimuovi dai recenti')); x.title = tr('Rimuovi dai recenti');
       x.addEventListener('click', function (e) { e.stopPropagation(); self.plugin.removeRecent(item.source); });
     }
     return card;
@@ -348,7 +346,7 @@ class HomeView extends obsidian.ItemView {
     var recents = (plugin.data.recent || []).map(function (r) { return { source: r.source, kind: /\.zip$/i.test(r.source) ? 'zip' : /\.(txt|json)$/i.test(r.source) ? 'file' : 'dir', ts: r.ts || 0 }; })
       .filter(function (it) { return self.matches(it); });
     if (recents.length) {
-      var s1 = el(host, 'section'), h1 = el(s1, 'div', 'pl-sec-h'); el(h1, 'h2', null, 'Aperte di recente');
+      var s1 = el(host, 'section'), h1 = el(s1, 'div', 'pl-sec-h'); el(h1, 'h2', null, tr('Aperte di recente'));
       var g1 = el(s1, 'div', 'pl-cards');
       recents.forEach(function (it) { self.card(g1, it, true); });
       shown += recents.length;
@@ -362,13 +360,13 @@ class HomeView extends obsidian.ItemView {
       var s = el(host, 'section'), h = el(s, 'div', 'pl-sec-h');
       var h2 = el(h, 'h2', null, path.basename(lib) || lib); h2.title = lib;
       el(h, 'span', 'pl-grow');
-      var rb = el(h, 'button', 'pl-link', 'Aggiorna'); rb.setAttribute('type', 'button');
+      var rb = el(h, 'button', 'pl-link', tr('Aggiorna')); rb.setAttribute('type', 'button');
       rb.addEventListener('click', function () { self.rescan(lib, false); });
-      var xb = el(h, 'button', 'pl-link', 'Rimuovi'); xb.setAttribute('type', 'button'); xb.title = 'Smette di mostrare questa cartella (i file non vengono toccati)';
+      var xb = el(h, 'button', 'pl-link', tr('Rimuovi')); xb.setAttribute('type', 'button'); xb.title = tr('Smette di mostrare questa cartella (i file non vengono toccati)');
       xb.addEventListener('click', function () { plugin.removeLibrary(lib); });
-      if (!sc) { el(s, 'div', 'pl-empty', 'Leggo la cartella…'); return; }
+      if (!sc) { el(s, 'div', 'pl-empty', tr('Leggo la cartella…')); return; }
       if (sc.error) { el(s, 'div', 'pl-empty', sc.error + ': ' + lib); return; }
-      if (!items.length) { el(s, 'div', 'pl-empty', 'Nessuna chat esportata in questa cartella (cerco zip, cartelle e file .txt/.json).'); return; }
+      if (!items.length) { el(s, 'div', 'pl-empty', tr('Nessuna chat in questa cartella: cerco zip, cartelle e file .txt/.json.')); return; }
       var g = el(s, 'div', 'pl-cards');
       items.forEach(function (it) { self.card(g, it, false); });
       shown += items.length;
@@ -376,13 +374,28 @@ class HomeView extends obsidian.ItemView {
 
     if (!shown && !self.filter.trim() && !libs.length) {
       var e = el(host, 'div', 'pl-empty pl-welcome');
-      el(e, 'b', null, 'Nessuna chat');
-      el(e, 'p', null, 'Scegli la cartella dove tieni gli export di WhatsApp e Telegram: le chat compariranno qui. I file restano dove sono.');
-      var wb = el(e, 'button', 'pl-textbtn', 'Aggiungi cartella di export…'); wb.setAttribute('type', 'button');
+      el(e, 'b', null, tr('Nessuna chat ancora'));
+      el(e, 'p', null, tr('Scegli la cartella con i tuoi export di WhatsApp e Telegram. Le chat compariranno qui; i file restano dove sono e non viene copiato nulla.'));
+      var wb = el(e, 'button', 'pl-textbtn', tr('Aggiungi cartella di export…')); wb.setAttribute('type', 'button');
       wb.addEventListener('click', async function () { var p = await pickPath('dir'); if (p) await plugin.addLibrary(p); });
     } else if (!shown && self.filter.trim()) {
-      el(host, 'div', 'pl-empty', 'Nessun risultato per «' + self.filter.trim() + '».');
+      el(host, 'div', 'pl-empty', tr('Nessun risultato per «{0}».', self.filter.trim()));
     }
+  }
+}
+
+/* ---------- impostazioni ---------- */
+var SettingsBase = obsidian.PluginSettingTab || class {};
+class ParleySettings extends SettingsBase {
+  constructor(app, plugin) { super(app, plugin); this.plugin = plugin; }
+  display() {
+    var self = this, c = this.containerEl;
+    c.empty();
+    new obsidian.Setting(c).setName(tr('Lingua')).setDesc(tr('Lingua dell\'interfaccia di Parley.')).addDropdown(function (d) {
+      d.addOption('auto', tr('Automatica (segue Obsidian)')).addOption('it', 'Italiano').addOption('en', 'English')
+        .setValue(self.plugin.data.lang || 'auto')
+        .onChange(async function (v) { self.plugin.data.lang = v; await self.plugin.savePlugin(); self.plugin.relocalize(); self.display(); });
+    });
   }
 }
 
@@ -396,10 +409,24 @@ class ParleyPlugin extends obsidian.Plugin {
     if (!this.data.recent) this.data.recent = [];
     if (!this.data.libraries) this.data.libraries = [];
     if (!this.data.meta) this.data.meta = {};
+    this.applyLocale();
     this.registerView(VIEW_TYPE, function (leaf) { return new ChatView(leaf, self); });
     this.registerView(HOME_TYPE, function (leaf) { return new HomeView(leaf, self); });
-    this.addRibbonIcon('messages-square', 'Apri Parley', function () { self.activateHome(); });
-    this.addCommand({ id: 'open-home', name: 'Apri Parley', callback: function () { self.activateHome(); } });
+    if (obsidian.PluginSettingTab && obsidian.Setting) this.addSettingTab(new ParleySettings(this.app, this));
+    this.addRibbonIcon('messages-square', tr('Apri Parley'), function () { self.activateHome(); });
+    this.addCommand({ id: 'open-home', name: tr('Apri Parley'), callback: function () { self.activateHome(); } });
+  }
+  /* lingua: "auto" segue Obsidian (it → italiano, altre → inglese); si può forzare dalle impostazioni */
+  applyLocale() {
+    var l = this.data.lang && this.data.lang !== 'auto' ? this.data.lang : I18N.detect();
+    I18N.setLocale(l);
+    P.setTranslator(I18N.t);
+  }
+  relocalize() {
+    this.applyLocale();
+    var ws = this.app.workspace;
+    (ws.getLeavesOfType ? ws.getLeavesOfType(HOME_TYPE) : []).forEach(function (l) { if (l.view && l.view.build) l.view.build(); });
+    (ws.getLeavesOfType ? ws.getLeavesOfType(VIEW_TYPE) : []).forEach(function (l) { if (l.view && l.view.load) l.view.load(); });
   }
   onunload() {
     this.app.workspace.detachLeavesOfType(VIEW_TYPE);
@@ -451,7 +478,7 @@ class ParleyPlugin extends obsidian.Plugin {
     await this.savePlugin();
     var self = this;
     await Promise.all(this.homes().map(function (v) { return v.rescan(dir, true).then(function () { v.render(); }); }));
-    if (!this.homes().length) new obsidian.Notice('Libreria aggiunta: ' + dir);
+    if (!this.homes().length) new obsidian.Notice(tr('Cartella aggiunta: {0}', dir));
   }
   async removeLibrary(dir) {
     this.data.libraries = this.data.libraries.filter(function (l) { return l !== dir; });
@@ -465,7 +492,7 @@ class ParleyPlugin extends obsidian.Plugin {
   }
   async openPath(p, opts) {
     var pst;
-    try { pst = await fs.promises.stat(p); } catch (e) { new obsidian.Notice('Percorso non trovato: ' + p); return; }
+    try { pst = await fs.promises.stat(p); } catch (e) { new obsidian.Notice(tr('Percorso non trovato: {0}', p)); return; }
     if (pst.isDirectory() && await isChatContainer(p)) {
       /* cartella con tante chat dentro: la tratto come libreria (una card per chat) invece di fonderle in una sola */
       await this.addLibrary(p);

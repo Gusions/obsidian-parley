@@ -52,12 +52,12 @@ Parley is desktop only (Obsidian 1.0 or newer).
 
 ## Usage
 
-Run the command **Apri Parley** (the interface is in Italian for now) or click the ribbon icon. The **+** button on the home offers:
+Run the command **Open Parley** (**Apri Parley** in Italian) or click the ribbon icon. The **+** button on the home offers:
 
-- **Aggiungi cartella di export…**: add a folder that holds many chats (a library). Opening such a folder with **Apri cartella…** does the same.
-- **Apri cartella…** / **Apri file zip…**: open a single chat.
+- **Add an exports folder…**: add a folder that holds many chats (a library). Opening such a folder with **Open a folder…** does the same.
+- **Open a folder…** / **Open a zip file…**: open a single chat.
 
-Click **Aggiorna** on a library to rescan it, **Rimuovi** to stop showing it (files are never touched).
+Click **Refresh** on a library to rescan it, **Remove** to stop showing it (files are never touched).
 
 | Shortcut | Action |
 | --- | --- |
@@ -72,7 +72,9 @@ Everything happens locally. Parley only reads the paths you choose and keeps a s
 
 ## Language
 
-The interface is currently in Italian only. English and other locales are planned; contributions welcome.
+The interface is available in **English** and **Italian**. By default Parley follows Obsidian's language (Italian if Obsidian is in Italian, English otherwise); you can force one in Settings, Parley, Language.
+
+Adding a language is a single object in `src/i18n.js`: copy the `EN` table, translate the values (keys are the Italian source strings) and register it in `LANGS`. `npm test` checks that no string is left untranslated. Pull requests welcome.
 
 ## Development
 
@@ -82,7 +84,7 @@ npm run build   # outputs dist/parley/ and dist/parley-<version>.zip
 npm test
 ```
 
-Layout: `src/parsers.js` (WhatsApp/Telegram), `src/zipreader.js` (lazy zip), `src/reader.js` (chat view), `src/main.js` (plugin, home), `build.js` bundles them into a single `main.js`.
+Layout: `src/parsers.js` (WhatsApp/Telegram), `src/zipreader.js` (lazy zip), `src/i18n.js` (translations), `src/reader.js` (chat view), `src/main.js` (plugin, home), `build.js` bundles them into a single `main.js`.
 
 ## License
 

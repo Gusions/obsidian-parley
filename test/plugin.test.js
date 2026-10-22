@@ -10,9 +10,10 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* ---------- ambiente DOM + finta API di Obsidian ---------- */
-const dom = new JSDOM('<body class="theme-light"></body>', { pretendToBeVisual: true });
+const dom = new JSDOM('<body class="theme-light"></body>', { pretendToBeVisual: true, url: 'http://localhost/' });
 const w = dom.window;
 global.window = w; global.document = w.document;
+let LANG = 'it'; w.localStorage && w.localStorage.setItem('language', LANG);
 global.requestAnimationFrame = (fn) => setTimeout(fn, 0);
 global.IntersectionObserver = class { constructor(cb) { this.cb = cb; } observe(t) { this.cb([{ isIntersecting: true, target: t }]); } unobserve() {} disconnect() {} };
 w.Element.prototype.scrollIntoView = function () {};
@@ -177,7 +178,7 @@ Module._load = function (req, ...rest) { return req === 'obsidian' ? obsidianStu
   /* percorso inesistente */
   const v3 = mkView(); await v3.onOpen();
   await v3.setState({ source: path.join(tmp, 'non-esiste.zip') }, {}); await sleep(100);
-  assert.ok(/Impossibile aprire/.test(v3.contentEl.textContent) && /non esiste più/.test(v3.contentEl.textContent), 'errore chiaro: ' + v3.contentEl.textContent.slice(0, 120));
+  assert.ok(/Non riesco ad aprire/.test(v3.contentEl.textContent) && /non esiste più/.test(v3.contentEl.textContent), 'errore chiaro: ' + v3.contentEl.textContent.slice(0, 120));
   console.log('✓ percorso mancante → messaggio chiaro');
 
   /* zip non valido */
@@ -259,6 +260,24 @@ Module._load = function (req, ...rest) { return req === 'obsidian' ? obsidianStu
   const uv = mkView(); await uv.setState({ source: unordered }, {}); await sleep(400);
   const utxt = Array.from(uv.contentEl.querySelectorAll('.txt')).map((n) => n.textContent).join(',');
   assert.strictEqual(utxt, 'primo,secondo,terzo', 'ordine cronologico: ' + utxt);
+  // ---- interfaccia in inglese: nessuna stringa italiana nell'interfaccia (testata, menu, info, galleria, home) ----
+  plugin.data.lang = 'en'; plugin.applyLocale();
+  const ITA = /\b(Cerca|Chiudi|Nessun[ao]?|Apri|Aggiungi|Aggiorna|Rimuovi|Chi sei|messaggi|Indietro|Altre azioni|Vai a|Foto e video|Documenti|Informazioni|Scarica|Oggi|Ieri|partecipanti|recente)\b/;
+  const ev = mkView(); await ev.setState({ source: zipPath }, {}); await sleep(300);
+  const ec = ev.contentEl;
+  ec.querySelector('[data-a="menu"]').click();
+  ec.querySelector('[data-act="info"]').click();
+  const infoTxt = ec.querySelector('.pl-modal').textContent;
+  assert.ok(/Chat info/.test(infoTxt) && /messages/.test(infoTxt) && /from .* to /.test(infoTxt), 'info in inglese: ' + infoTxt.slice(0, 160));
+  ec.querySelector('[data-close]').click();
+  ec.querySelector('[data-a="media"]').click();
+  assert.ok(/Photos and videos \(1\)/.test(ec.querySelector('.pl-modal').textContent), 'galleria in inglese');
+  const chrome = ec.querySelector('.pl-head').outerHTML + ec.querySelector('.pl-sbar').outerHTML + ec.querySelector('.pl-pop').outerHTML + ec.querySelector('.pl-modal').outerHTML;
+  assert.ok(!ITA.test(chrome.replace(/<[^>]+>/g, ' ').replace(/title="[^"]*"/g, '')) , 'resta italiano nell\'interfaccia: ' + (ITA.exec(chrome.replace(/<[^>]+>/g, ' ')) || [])[0]);
+  assert.ok(!ITA.test((chrome.match(/(title|aria-label|placeholder)="[^"]*"/g) || []).join(' ')), 'attributi ancora in italiano: ' + (chrome.match(/(title|aria-label|placeholder)="[^"]*"/g) || []).join(' | '));
+  const eh = plugin.views['parley-home']({ view: null }); await eh.onOpen(); await sleep(30);
+  assert.ok(/Recently opened/.test(eh.contentEl.textContent) && !ITA.test(eh.contentEl.textContent.replace(/Anna|Marco/g, '')), 'home in inglese: ' + eh.contentEl.textContent.slice(0, 200));
+  plugin.data.lang = 'it'; plugin.applyLocale();
   // libreria mancante → messaggio, rimozione libreria
   await plugin.addLibrary(path.join(tmp, 'sparita')); await sleep(30);
   assert.ok(/Cartella non trovata/.test(hc.textContent));

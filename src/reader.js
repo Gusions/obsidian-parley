@@ -2,6 +2,7 @@
 /* Interfaccia "lettore chat" per Obsidian. Dipende da P (ChatParsers) e non tocca il filesystem:
    riceve una Source le cui voci espongono getBuffer(). */
 var PAGE = 300;
+var tr = I18N.t, trn = I18N.tn;
 
 /* ---------- utilità ---------- */
 var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -48,19 +49,17 @@ var ICONS = {
 var ic = function (n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[n] + '</svg>'; };
 
 /* ---------- date ---------- */
-var tFmt = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' });
-var dLong = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-var dMed = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
-var dMonth = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' });
+var fmtOf = function (kind) { return { format: function (d) { return I18N.dt(kind).format(d); } }; };
+var tFmt = fmtOf('t'), dLong = fmtOf('long'), dMed = fmtOf('med'), dMonth = fmtOf('month');
 var dayKey = function (m) {
   if (m._dk === undefined) { var d = new Date(m.ts); m._dk = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   return m._dk;
 };
 function dayLabel(m) {
   var d = new Date(), t = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(), k = dayKey(m);
-  if (k === t) return 'Oggi';
+  if (k === t) return tr('Oggi');
   d.setDate(d.getDate() - 1);
-  if (k === d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) return 'Ieri';
+  if (k === d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) return tr('Ieri');
   var s = dLong.format(new Date(m.ts));
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -152,7 +151,7 @@ async function detectChats(src, store, progress) {
     e = src.entries[i];
     if (!/\.json$/i.test(e.path) || (e.size && e.size > 450e6)) continue;
     var obj;
-    say('Leggo ' + P.baseName(e.path) + '…');
+    say(tr('Leggo {0}…', P.baseName(e.path)));
     try { obj = JSON.parse(await readText(e)); } catch (x) { continue; }
     var parsed = P.parseTelegramJson(obj || {});
     for (var j = 0; j < parsed.length; j++) out.push(buildChat(Object.assign({ platform: 'telegram', src: src, dir: dirOf(e.path) }, parsed[j]), store));
@@ -168,7 +167,7 @@ async function detectChats(src, store, progress) {
   });
   for (var g of groups) {
     var arr = g[1].sort(function (a, b) { return a.n - b.n; }), htmls = [];
-    say('Leggo la cronologia HTML…');
+    say(tr('Leggo la cronologia HTML…'));
     for (i = 0; i < arr.length; i++) htmls.push(await readText(arr[i].e));
     var r = P.parseTelegramHtml(htmls);
     if (r.messages.length) out.push(buildChat({ platform: 'telegram', src: src, dir: g[0], name: r.name, messages: r.messages, participants: r.participants }, store));
@@ -177,12 +176,12 @@ async function detectChats(src, store, progress) {
   for (i = 0; i < src.entries.length; i++) {
     e = src.entries[i];
     if (!/\.txt$/i.test(e.path) || (e.size && e.size > 300e6)) continue;
-    say('Leggo ' + P.baseName(e.path) + '…');
+    say(tr('Leggo {0}…', P.baseName(e.path)));
     var t = await readText(e);
     if (!P.looksLikeWhatsApp(t)) continue;
     var w = P.parseWhatsApp(t);
     if (!w.messages.length) continue;
-    var name = P.deriveWaName([src.label, P.baseName(e.path)]) || ('Chat con ' + w.participants.slice(0, 3).join(', '));
+    var name = P.deriveWaName([src.label, P.baseName(e.path)]) || tr('Chat con {0}', w.participants.slice(0, 3).join(', '));
     out.push(buildChat({ platform: 'whatsapp', src: src, dir: dirOf(e.path), name: name, messages: w.messages, participants: w.participants }, store));
     await tick();
   }
@@ -237,36 +236,35 @@ try { EMOJI_ONLY = new RegExp('^(?:\\p{Extended_Pictographic}[\\uFE0F\\u200D\\u{
 function snippet(m) {
   if (!m) return '';
   var md = m.media && m.media[0], s = (m.plain || '').replace(/\s+/g, ' ').trim();
-  if (md && !s) return { image: '📷 Foto', video: '🎬 Video', audio: '🎤 Audio' }[md.kind] || '📎 Documento';
+  if (md && !s) return { image: tr('📷 Foto'), video: tr('🎬 Video'), audio: tr('🎤 Audio') }[md.kind] || tr('📎 Documento');
   return s;
 }
 
-var TEMPLATE =
-  '<div class="pl-head">' +
-  '<button class="pl-ib" data-a="home" hidden title="Indietro: elenco delle chat (Cmd+[)" aria-label="Indietro">' + ic('chev') + '</button>' +
+var TEMPLATE = function () { return '<div class="pl-head">' +
+  '<button class="pl-ib" data-a="home" hidden title="' + tr('Torna alle chat (Cmd+[)') + '" aria-label="' + tr('Torna alle chat (Cmd+[)') + '">' + ic('chev') + '</button>' +
   '<div class="pl-av"></div>' +
   '<div class="pl-title"><b></b><span></span></div>' +
-  '<select class="pl-sel" hidden aria-label="Chat"></select>' +
-  '<button class="pl-ib" data-a="search" title="Cerca nella chat (Ctrl/Cmd+F)">' + ic('search') + '</button>' +
-  '<button class="pl-ib" data-a="date" title="Vai a una data">' + ic('event') + '</button>' +
-  '<button class="pl-ib" data-a="media" title="Media, documenti e link">' + ic('photos') + '</button>' +
-  '<button class="pl-ib" data-a="menu" title="Altro">' + ic('more') + '</button>' +
+  '<select class="pl-sel" hidden aria-label="' + tr('Chat') + '"></select>' +
+  '<button class="pl-ib" data-a="search" title="' + tr('Cerca nella chat (Ctrl/Cmd+F)') + '">' + ic('search') + '</button>' +
+  '<button class="pl-ib" data-a="date" title="' + tr('Vai a una data') + '">' + ic('event') + '</button>' +
+  '<button class="pl-ib" data-a="media" title="' + tr('Media, documenti e link') + '">' + ic('photos') + '</button>' +
+  '<button class="pl-ib" data-a="menu" title="' + tr('Altre azioni') + '">' + ic('more') + '</button>' +
   '<input type="date" class="pl-date" tabindex="-1" aria-hidden="true">' +
   '</div>' +
-  '<div class="pl-sbar" hidden><input class="pl-field" type="search" placeholder="Cerca nei messaggi" autocomplete="off">' +
+  '<div class="pl-sbar" hidden><input class="pl-field" type="search" placeholder="' + tr('Cerca in questa chat') + '" autocomplete="off">' +
   '<span class="pl-count"></span>' +
-  '<button class="pl-ib" data-a="qup" title="Risultato precedente">' + ic('up') + '</button>' +
-  '<button class="pl-ib" data-a="qdown" title="Risultato successivo">' + ic('down') + '</button>' +
-  '<button class="pl-ib" data-a="qclose" title="Chiudi ricerca">' + ic('close') + '</button></div>' +
+  '<button class="pl-ib" data-a="qup" title="' + tr('Risultato precedente') + '">' + ic('up') + '</button>' +
+  '<button class="pl-ib" data-a="qdown" title="' + tr('Risultato successivo') + '">' + ic('down') + '</button>' +
+  '<button class="pl-ib" data-a="qclose" title="' + tr('Chiudi ricerca') + '">' + ic('close') + '</button></div>' +
   '<div class="pl-daychip" hidden></div>' +
   '<div class="pl-hint" hidden></div>' +
   '<div class="pl-msgs" tabindex="0"><div class="pl-rows"></div></div>' +
-  '<button class="pl-jump" hidden title="Vai all\'ultimo messaggio">' + ic('down') + '</button>' +
+  '<button class="pl-jump" hidden title="' + tr("Vai all'ultimo messaggio") + '">' + ic('down') + '</button>' +
   '<div class="pl-pop" hidden></div>' +
   '<div class="pl-modal" hidden></div>' +
   '<div class="pl-lb" hidden></div>' +
   '<div class="pl-busy" hidden><div class="pl-busybox"><div class="pl-spin"></div><div class="pl-busymsg"></div></div></div>' +
-  '<div class="pl-toast" hidden></div>';
+  '<div class="pl-toast" hidden></div>'; };
 
 /* ---------- il lettore ---------- */
 function createReader(root, opts) {
@@ -276,7 +274,7 @@ function createReader(root, opts) {
   var toastT, io = null, scrollQueued = false, destroyed = false;
 
   root.classList.add('pl');
-  root.innerHTML = TEMPLATE;
+  root.innerHTML = TEMPLATE();
   var q = function (s) { return root.querySelector(s); };
   var el = {
     head: q('.pl-head'), av: q('.pl-av'), title: q('.pl-title'), sel: q('.pl-sel'), date: q('.pl-date'),
@@ -307,12 +305,12 @@ function createReader(root, opts) {
   }
   function diag(chat, md) {
     var e = entryOf(chat, md);
-    if (!e) return Promise.resolve('file non trovato');
+    if (!e) return Promise.resolve(tr('file non trovato'));
     return readHead(e).then(function (u8) {
       var hex = u8 ? Array.prototype.map.call(Array.prototype.slice.call(u8, 0, 8), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(' ') : '?';
       var real = sniff(u8);
-      return (md.name || e.path) + ' · ' + fmtSize(e.size) + ' · formato rilevato: ' + (real || 'sconosciuto') + ' · primi byte: ' + hex +
-        (real === 'image/heic' ? ' · HEIC non supportato da questo visualizzatore' : '');
+      return [md.name || e.path, fmtSize(e.size), tr('formato rilevato: {0}', real || tr('sconosciuto')), tr('primi byte: {0}', hex),
+        real === 'image/heic' ? tr('HEIC non supportato da questo visualizzatore') : ''].filter(Boolean).join(' · ');
     });
   }
   function download(chat, md) {
@@ -331,9 +329,9 @@ function createReader(root, opts) {
 
   function mediaHTML(chat, i, k, md) {
     var at = ' data-i="' + i + '" data-k="' + k + '"';
-    if (md.omitted) return '<div class="m miss">' + ({ image: '📷', video: '🎬', audio: '🎤' }[md.kind] || '📎') + ' ' + esc(md.title || 'Media non incluso nell\'export') + '</div>';
+    if (md.omitted) return '<div class="m miss">' + ({ image: '📷', video: '🎬', audio: '🎤' }[md.kind] || '📎') + ' ' + esc(md.title || tr('Media non incluso nell\'export')) + '</div>';
     var e = entryOf(chat, md);
-    if (!e) return '<div class="m miss">⚠ File non trovato: ' + esc(md.name || md.path) + '</div>';
+    if (!e) return '<div class="m miss">⚠ ' + esc(tr('File non trovato: {0}', md.name || md.path)) + '</div>';
     var nm = md.name || P.baseName(e.path);
     switch (md.kind) {
       case 'image':
@@ -341,7 +339,7 @@ function createReader(root, opts) {
       case 'video':
         return '<div class="m vid' + (md.round ? ' round' : '') + '"' + at + ' role="button" tabindex="0"><div class="pl-play">' + ic('play') + '</div><div class="cap">' + esc(nm) + (md.dur ? ' · ' + P.fmtDur(md.dur) : (e.size ? ' · ' + fmtSize(e.size) : '')) + '</div></div>';
       case 'audio':
-        return '<div class="m aud"' + at + '><button class="play" aria-label="Riproduci">' + ic('play') + '</button><div class="info"><b>' + (md.voice || /^(PTT|AUD)-/i.test(nm) ? 'Nota vocale' : esc(nm)) + '</b><span>' + (md.dur ? P.fmtDur(md.dur) : fmtSize(e.size)) + '</span></div></div>';
+        return '<div class="m aud"' + at + '><button class="play" aria-label="' + tr('Riproduci') + '">' + ic('play') + '</button><div class="info"><b>' + (md.voice || /^(PTT|AUD)-/i.test(nm) ? tr('Nota vocale') : esc(nm)) + '</b><span>' + (md.dur ? P.fmtDur(md.dur) : fmtSize(e.size)) + '</span></div></div>';
       default:
         return '<div class="m doc"' + at + ' role="button" tabindex="0"><span class="ic">' + ic('file') + '</span><div class="info"><b>' + esc(md.title || nm) + '</b><span>' + esc((P.extOf(nm) || 'file').toUpperCase()) + (e.size ? ' · ' + fmtSize(e.size) : '') + '</span></div><span class="ic">' + ic('download') + '</span></div>';
     }
@@ -382,7 +380,7 @@ function createReader(root, opts) {
       if (!u) return;
       img.onerror = function () {
         box.className = 'm doc'; setTimeout(fixAnchor, 0);
-        box.innerHTML = '<span class="ic">' + ic('file') + '</span><div class="info"><b>' + esc(md.name || 'immagine') + '</b><span>Anteprima non disponibile · clic per scaricare</span></div>';
+        box.innerHTML = '<span class="ic">' + ic('file') + '</span><div class="info"><b>' + esc(md.name || tr('immagine')) + '</b><span>' + esc(tr('Anteprima non disponibile. Clic per scaricare')) + '</span></div>';
         diag(c, md).then(function (t) { var s = box.querySelector('.info span'); if (s) s.textContent = t; });
       };
       img.addEventListener('load', fixAnchor, { once: true });
@@ -395,7 +393,7 @@ function createReader(root, opts) {
     node.controls = true; node.autoplay = true; node.src = u;
     node.addEventListener('error', function () {
       box.className = 'm doc';
-      box.innerHTML = '<span class="ic">' + ic('file') + '</span><div class="info"><b>' + esc(md.name || 'file') + '</b><span>Formato non riproducibile · clic per scaricare</span></div>';
+      box.innerHTML = '<span class="ic">' + ic('file') + '</span><div class="info"><b>' + esc(md.name || 'file') + '</b><span>' + esc(tr('Formato non riproducibile. Clic per scaricare')) + '</span></div>';
     });
     box.innerHTML = ''; box.appendChild(node);
     if (tag === 'video') { box.removeAttribute('role'); box.style.cursor = 'default'; }
@@ -411,12 +409,12 @@ function createReader(root, opts) {
     var showName = !out && chat.group && !cont;
     var onlySticker = m.media.length === 1 && m.media[0].sticker && !(m.plain || '').trim();
     var body = '';
-    if (m.fwd) body += '<div class="fwd">Inoltrato da ' + esc(m.fwd) + '</div>';
+    if (m.fwd) body += '<div class="fwd">' + esc(tr('Inoltrato da {0}', m.fwd)) + '</div>';
     if (m.replyTo != null) {
       var ri = chat.byId.get(typeof m.replyTo === 'string' && !isNaN(+m.replyTo) ? +m.replyTo : m.replyTo), rm = ri != null ? chat.messages[ri] : null;
       body += rm
         ? '<div class="reply" data-rid="' + esc(m.replyTo) + '"><b>' + esc(rm.from || '') + '</b><span>' + esc(snippet(rm) || '…') + '</span></div>'
-        : '<div class="reply"><b>Risposta</b><span>messaggio non disponibile</span></div>';
+        : '<div class="reply"><b>' + esc(tr('Risposta')) + '</b><span>' + esc(tr('messaggio non disponibile')) + '</span></div>';
     }
     m.media.forEach(function (md, k) { body += mediaHTML(chat, i, k, md); });
     var txt = m.entities ? fmtEntities(m.entities) : fmtWa(m.text || '');
@@ -424,7 +422,7 @@ function createReader(root, opts) {
       var emoji = EMOJI_ONLY && !m.media.length && EMOJI_ONLY.test((m.plain || '').trim());
       body += '<div class="txt' + (emoji ? ' emoji' : '') + (m.deleted ? ' deleted' : '') + '">' + highlight(txt, st.q) + '</div>';
     }
-    var meta = (m.edited ? 'modificato · ' : '') + tFmt.format(new Date(m.ts));
+    var meta = (m.edited ? tr('modificato') + ' · ' : '') + tFmt.format(new Date(m.ts));
     var react = m.reactions ? '<div class="reacts">' + m.reactions.map(function (r) { return '<span>' + esc(r.e) + (r.n > 1 ? ' ' + r.n : '') + '</span>'; }).join('') + '</div>' : '';
     return html + '<div class="row ' + (out ? 'out' : 'in') + (cont ? ' cont' : '') + '" data-i="' + i + '">' +
       '<div class="bubble' + (onlySticker ? ' plain' : '') + '">' +
@@ -517,7 +515,7 @@ function createReader(root, opts) {
   function jumpToId(id) {
     var c = st.cur; if (!c) return;
     var i = c.byId.get(isNaN(+id) ? id : +id);
-    if (i != null) jumpTo(i); else toast('Messaggio non presente nell\'export');
+    if (i != null) jumpTo(i); else toast(tr('Questo messaggio non è nell\'export'));
   }
 
   /* ---- apertura chat ---- */
@@ -526,8 +524,8 @@ function createReader(root, opts) {
     closeSearch(true); closePop();
     el.av.textContent = Array.from(c.name)[0] || '?'; el.av.style.background = 'hsl(' + hue(c.name) + ' 28% 46%)';
     el.title.querySelector('b').textContent = c.name;
-    el.title.querySelector('span').textContent = (c.group ? c.participants.length + ' partecipanti · ' : '') +
-      c.messages.length.toLocaleString('it-IT') + ' messaggi · ' + dMed.format(new Date(c.first)) + ' – ' + dMed.format(new Date(c.last));
+    el.title.querySelector('span').textContent = (c.group ? trn(c.participants.length, '{0} partecipante', '{0} partecipanti') + ' · ' : '') +
+      trn(c.messages.length, '{0} messaggio', '{0} messaggi') + ' · ' + dMed.format(new Date(c.first)) + ' – ' + dMed.format(new Date(c.last));
     el.date.min = isoDay(c.first); el.date.max = isoDay(c.last); el.date.value = '';
     var N = c.messages.length;
     st.win = { start: Math.max(0, N - PAGE), end: N };
@@ -536,9 +534,9 @@ function createReader(root, opts) {
   function showHint() {
     var c = st.cur;
     if (!c || c.meSure || c.meDismissed || !c.participants.length) { el.hint.hidden = true; return; }
-    el.hint.innerHTML = '<div class="pl-hintbox">Chi sei tu in questa chat? ' +
+    el.hint.innerHTML = '<div class="pl-hintbox">' + esc(tr('Chi sei in questa chat?')) + ' ' +
       c.participants.slice(0, 4).map(function (p) { return '<button data-me="' + esc(p) + '">' + esc(p) + '</button>'; }).join('') +
-      '<button data-meclose="1" aria-label="Chiudi">✕</button></div>';
+      '<button data-meclose="1" aria-label="' + esc(tr('Chiudi')) + '">✕</button></div>';
     el.hint.hidden = false;
   }
   function setMe(name) {
@@ -565,15 +563,15 @@ function createReader(root, opts) {
       if (m._n === undefined) m._n = norm((m.plain || '') + ' ' + m.media.map(function (x) { return x.name || x.title || ''; }).join(' '));
       if (m._n.indexOf(nq) >= 0) st.hits.push(i);
     });
-    if (!st.hits.length) { el.count.textContent = 'Nessun risultato'; renderWindow(firstVisible()); return; }
+    if (!st.hits.length) { el.count.textContent = tr('Nessun risultato'); renderWindow(firstVisible()); return; }
     st.hitPos = st.hits.length - 1;
-    el.count.textContent = (st.hitPos + 1) + ' di ' + st.hits.length;
+    el.count.textContent = tr('{0} di {1}', st.hitPos + 1, st.hits.length);
     jumpTo(st.hits[st.hitPos], { rerender: true });
   }
   function stepHit(d) {
     var n = st.hits.length; if (!n) return;
     st.hitPos = (st.hitPos + d + n) % n;
-    el.count.textContent = (st.hitPos + 1) + ' di ' + n;
+    el.count.textContent = tr('{0} di {1}', st.hitPos + 1, n);
     var i = st.hits[st.hitPos];
     jumpTo(i, { rerender: !(i >= st.win.start && i < st.win.end) });
   }
@@ -589,14 +587,14 @@ function createReader(root, opts) {
   function closePop() { el.pop.hidden = true; }
   function openPop() {
     var c = st.cur; if (!c) return;
-    var h = '<div class="pl-lbl">Chi sei tu?</div>';
+    var h = '<div class="pl-lbl">' + esc(tr('Chi sei?')) + '</div>';
     c.participants.slice(0, 12).forEach(function (p) { h += '<button data-me="' + esc(p) + '"' + (c.me === p ? ' class="on"' : '') + '>' + esc(p) + '</button>'; });
-    h += '<button data-me=""' + (!c.me ? ' class="on"' : '') + '>Nessuno (tutti a sinistra)</button><div class="pl-sep"></div>' +
-      '<button data-act="info">Informazioni sulla chat</button><button data-act="media">Media, documenti e link</button>';
+    h += '<button data-me=""' + (!c.me ? ' class="on"' : '') + '>' + esc(tr('Nessuno (tutti a sinistra)')) + '</button><div class="pl-sep"></div>' +
+      '<button data-act="info">' + esc(tr('Informazioni sulla chat')) + '</button><button data-act="media">' + esc(tr('Media, documenti e link')) + '</button>';
     el.pop.innerHTML = h; el.pop.hidden = false;
   }
   function modal(title, bodyHTML) {
-    el.modal.innerHTML = '<div class="pl-sheet" role="dialog"><header><h3>' + esc(title) + '</h3><button class="pl-ib" data-close aria-label="Chiudi">' + ic('close') + '</button></header>' + bodyHTML + '</div>';
+    el.modal.innerHTML = '<div class="pl-sheet" role="dialog"><header><h3>' + esc(title) + '</h3><button class="pl-ib" data-close aria-label="' + esc(tr('Chiudi')) + '">' + ic('close') + '</button></header>' + bodyHTML + '</div>';
     el.modal.hidden = false;
   }
   function closeModal() { el.modal.hidden = true; el.modal.innerHTML = ''; }
@@ -605,10 +603,10 @@ function createReader(root, opts) {
     var counts = {}, media = 0;
     c.messages.forEach(function (m) { if (!m.system) counts[m.from] = (counts[m.from] || 0) + 1; media += m.media.filter(function (x) { return !x.omitted; }).length; });
     var rows = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).map(function (n) {
-      return '<tr><td>' + esc(n) + (c.me === n ? ' <small>(tu)</small>' : '') + '</td><td>' + counts[n].toLocaleString('it-IT') + ' messaggi</td></tr>';
+      return '<tr><td>' + esc(n) + (c.me === n ? ' <small>' + esc(tr('(tu)')) + '</small>' : '') + '</td><td>' + esc(trn(counts[n], '{0} messaggio', '{0} messaggi')) + '</td></tr>';
     }).join('');
-    modal('Informazioni sulla chat', '<div class="pl-scroll"><p><b>' + esc(c.name) + '</b><br><span class="pl-muted">' + (c.platform === 'telegram' ? 'Telegram' : 'WhatsApp') + ' · ' +
-      c.messages.length.toLocaleString('it-IT') + ' messaggi · ' + media.toLocaleString('it-IT') + ' file multimediali<br>dal ' + dLong.format(new Date(c.first)) + ' al ' + dLong.format(new Date(c.last)) + '</span></p><table class="pl-stats">' + rows + '</table></div>');
+    modal(tr('Informazioni sulla chat'), '<div class="pl-scroll"><p><b>' + esc(c.name) + '</b><br><span class="pl-muted">' + (c.platform === 'telegram' ? 'Telegram' : 'WhatsApp') + ' · ' +
+      esc(trn(c.messages.length, '{0} messaggio', '{0} messaggi')) + ' · ' + esc(trn(media, '{0} file multimediale', '{0} file multimediali')) + '<br>' + esc(tr('dal {0} al {1}', dLong.format(new Date(c.first)), dLong.format(new Date(c.last)))) + '</span></p><table class="pl-stats">' + rows + '</table></div>');
   }
   /* GIF e sticker vanno separati dalle foto vere */
   function isLoop(md) {
@@ -631,15 +629,15 @@ function createReader(root, opts) {
     var c = st.cur; if (!c) return;
     var data = collectMedia(c);
     var body = '<div class="pl-tabs">' +
-      '<button data-tab="media" class="' + (tab === 'media' ? 'on' : '') + '">Foto e video (' + data.vis.length + ')</button>' +
-      '<button data-tab="anim" class="' + (tab === 'anim' ? 'on' : '') + '">GIF e sticker (' + data.anim.length + ')</button>' +
-      '<button data-tab="docs" class="' + (tab === 'docs' ? 'on' : '') + '">Documenti (' + data.docs.length + ')</button>' +
-      '<button data-tab="links" class="' + (tab === 'links' ? 'on' : '') + '">Link (' + data.links.length + ')</button></div><div class="pl-scroll pl-gscroll"></div>';
-    modal('Media, documenti e link', body);
+      '<button data-tab="media" class="' + (tab === 'media' ? 'on' : '') + '">' + esc(tr('Foto e video ({0})', data.vis.length)) + '</button>' +
+      '<button data-tab="anim" class="' + (tab === 'anim' ? 'on' : '') + '">' + esc(tr('GIF e sticker ({0})', data.anim.length)) + '</button>' +
+      '<button data-tab="docs" class="' + (tab === 'docs' ? 'on' : '') + '">' + esc(tr('Documenti ({0})', data.docs.length)) + '</button>' +
+      '<button data-tab="links" class="' + (tab === 'links' ? 'on' : '') + '">' + esc(tr('Link ({0})', data.links.length)) + '</button></div><div class="pl-scroll pl-gscroll"></div>';
+    modal(tr('Media, documenti e link'), body);
     var box = q('.pl-gscroll');
     if (tab === 'media' || tab === 'anim') {
       var grid = tab === 'anim' ? data.anim : data.vis;
-      if (!grid.length) { box.innerHTML = '<div class="pl-note">' + (tab === 'anim' ? 'Nessuna GIF o sticker in questa chat.' : 'Nessuna foto o video in questa chat.') + '</div>'; return; }
+      if (!grid.length) { box.innerHTML = '<div class="pl-note">' + esc(tab === 'anim' ? tr('Nessuna GIF o sticker in questa chat.') : tr('Nessuna foto o video in questa chat.')) + '</div>'; return; }
       /* dalla più recente alla più vecchia, con l'intestazione del mese come su Foto */
       var ordered = grid.slice().sort(function (x, y) { return (c.messages[y.i].ts - c.messages[x.i].ts) || (y.i - x.i) || (y.k - x.k); }), lastMon = null, gh = '';
       ordered.forEach(function (x) {
@@ -663,12 +661,12 @@ function createReader(root, opts) {
     } else if (tab === 'docs') {
       box.innerHTML = data.docs.length ? '<div class="pl-list">' + data.docs.slice().reverse().map(function (x) {
         var e = entryOf(c, x.md), nm = x.md.name || P.baseName(e.path);
-        return '<div class="pl-li" data-dl="' + x.i + ':' + x.k + '"><span class="ic">' + ic(x.md.kind === 'audio' ? 'mic' : 'file') + '</span><div class="info"><b>' + esc(nm) + '</b><span>' + esc(dMed.format(new Date(c.messages[x.i].ts))) + (e.size ? ' · ' + fmtSize(e.size) : '') + '</span></div><button class="pl-btn" data-go="' + x.i + '">Vai</button></div>';
-      }).join('') + '</div>' : '<div class="pl-note">Nessun documento o audio.</div>';
+        return '<div class="pl-li" data-dl="' + x.i + ':' + x.k + '"><span class="ic">' + ic(x.md.kind === 'audio' ? 'mic' : 'file') + '</span><div class="info"><b>' + esc(nm) + '</b><span>' + esc(dMed.format(new Date(c.messages[x.i].ts))) + (e.size ? ' · ' + fmtSize(e.size) : '') + '</span></div><button class="pl-btn" data-go="' + x.i + '">' + esc(tr('Vai')) + '</button></div>';
+      }).join('') + '</div>' : '<div class="pl-note">' + esc(tr('Nessun documento o audio.')) + '</div>';
     } else {
       box.innerHTML = data.links.length ? '<div class="pl-list">' + data.links.slice().reverse().map(function (x) {
-        return '<div class="pl-li" data-url="' + esc(x.url) + '"><span class="ic">' + ic('link') + '</span><div class="info"><b>' + esc(x.url) + '</b><span>' + esc(x.from || '') + ' · ' + esc(dMed.format(new Date(x.ts))) + '</span></div><button class="pl-btn" data-go="' + x.i + '">Vai</button></div>';
-      }).join('') + '</div>' : '<div class="pl-note">Nessun link.</div>';
+        return '<div class="pl-li" data-url="' + esc(x.url) + '"><span class="ic">' + ic('link') + '</span><div class="info"><b>' + esc(x.url) + '</b><span>' + esc(x.from || '') + ' · ' + esc(dMed.format(new Date(x.ts))) + '</span></div><button class="pl-btn" data-go="' + x.i + '">' + esc(tr('Vai')) + '</button></div>';
+      }).join('') + '</div>' : '<div class="pl-note">' + esc(tr('Nessun link.')) + '</div>';
     }
   }
 
@@ -684,17 +682,17 @@ function createReader(root, opts) {
     var c = st.cur, x = lb.list[lb.pos]; if (!x) return;
     var m = c.messages[x.i], md = x.md;
     el.lb.innerHTML = '<div class="top"><div class="cap">' + esc((m.from || '') + ' · ' + dMed.format(new Date(m.ts)) + ' ' + tFmt.format(new Date(m.ts)) + ' · ' + (lb.pos + 1) + '/' + lb.list.length) + '</div>' +
-      '<button class="pl-btn" data-lb="go">Vai al messaggio</button>' +
-      '<button class="pl-ib" data-lb="dl" aria-label="Scarica">' + ic('download') + '</button>' +
-      '<button class="pl-ib" data-lb="close" aria-label="Chiudi">' + ic('close') + '</button></div>' +
-      '<div class="stage"><button class="nav l" data-lb="prev" aria-label="Precedente">' + ic('back') + '</button><div class="pl-lbm"></div><button class="nav r" data-lb="next" aria-label="Successivo">' + ic('back') + '</button></div>';
+      '<button class="pl-btn" data-lb="go">' + esc(tr('Vai al messaggio')) + '</button>' +
+      '<button class="pl-ib" data-lb="dl" aria-label="' + esc(tr('Scarica')) + '">' + ic('download') + '</button>' +
+      '<button class="pl-ib" data-lb="close" aria-label="' + esc(tr('Chiudi')) + '">' + ic('close') + '</button></div>' +
+      '<div class="stage"><button class="nav l" data-lb="prev" aria-label="' + esc(tr('Precedente')) + '">' + ic('back') + '</button><div class="pl-lbm"></div><button class="nav r" data-lb="next" aria-label="' + esc(tr('Successivo')) + '">' + ic('back') + '</button></div>';
     var u = await blobUrl(c, md); if (!u || lb.list[lb.pos] !== x) return;
     var holder = q('.pl-lbm'); if (!holder) return;
     var node = document.createElement(md.kind === 'video' ? 'video' : 'img');
     if (md.kind === 'video') { node.controls = true; node.autoplay = true; }
     node.src = u;
     node.addEventListener('error', function () {
-      holder.innerHTML = '<p class="pl-bad2">Impossibile mostrare questo file. Usa «Scarica».<br><small class="pl-lbd">Analizzo il file…</small></p>';
+      holder.innerHTML = '<p class="pl-bad2">' + esc(tr('Non riesco a mostrare questo file. Puoi scaricarlo.')) + '<br><small class="pl-lbd">' + esc(tr('Analizzo il file…')) + '</small></p>';
       diag(c, md).then(function (t) { var d = q('.pl-lbd'); if (d) d.textContent = t; });
     });
     holder.appendChild(node);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+- Translatable interface: English and Italian, following Obsidian's language by default, with a Language setting to force one. New languages are a single table in `src/i18n.js`.
+- Microcopy pass: clearer labels, tooltips, empty states and error messages (e.g. "Who are you in this chat?", "Back to chats", "Not opened yet").
+- Telegram service messages and "not included in the export" notes are translated too.
+- Manifest description now in English.
+
 ## 0.4.11
 - Minimum Obsidian version lowered to 1.0.0.
 

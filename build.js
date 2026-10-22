@@ -11,6 +11,7 @@ const main = `'use strict';
 var obsidian = require('obsidian');
 var fs = require('fs');
 var path = require('path');
+var I18N = ${mod(r('src/i18n.js'))};
 var P = ${mod(r('src/parsers.js'))};
 var ZipReader = ${mod(r('src/zipreader.js'))};
 var Reader = ${mod(r('src/reader.js'))};
