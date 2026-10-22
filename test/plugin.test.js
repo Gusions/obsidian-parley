@@ -246,6 +246,10 @@ Module._load = function (req, ...rest) { return req === 'obsidian' ? obsidianStu
   assert.ok(plugin.data.libraries.includes(cont), 'cartella contenitore aggiunta come libreria');
   assert.ok(!leafStates.some((x) => x.type === 'parley-view'), 'nessuna chat unica aperta');
   await plugin.removeLibrary(cont); await sleep(20);
+  // cartella "persona" che contiene uno zip annidato → la chat si legge lo stesso
+  const nest = path.join(tmp, 'Persona Annidata'); fs.mkdirSync(nest); fs.copyFileSync(zipPath, path.join(nest, 'export.zip'));
+  const ns = mkView(); await ns.setState({ source: nest }, {}); await sleep(400);
+  assert.ok(!/Non ho trovato/.test(ns.contentEl.textContent || '') && /Anna|Chat/.test(ns.contentEl.textContent || ''), 'zip annidato letto: ' + (ns.contentEl.textContent || '').slice(0, 200));
   // libreria mancante → messaggio, rimozione libreria
   await plugin.addLibrary(path.join(tmp, 'sparita')); await sleep(30);
   assert.ok(/Cartella non trovata/.test(hc.textContent));

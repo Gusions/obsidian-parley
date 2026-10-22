@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.7
+- A chat folder that contains a zip (e.g. `Name/Name.zip`) is now read through the inner zip.
+- When no chat is found, the error lists what was found in the folder, to make odd exports easy to diagnose.
+
 ## 0.4.6
 - Opening a folder that holds many chats (no chat file at its top level, one sub-folder or zip per chat) now adds it as a library, one card per chat named after its folder, instead of merging everything into a single chat.
 

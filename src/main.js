@@ -42,12 +42,27 @@ async function openSource(p) {
   if (st.isDirectory()) {
     var files = [];
     await walkDir(p, '', files);
+    var zips = [];
     for (var i = 0; i < files.length; i++) {
       (function (f) {
+        /* zip dentro la cartella (es. "Nome/Nome.zip"): ne leggo il contenuto come se fosse una sottocartella */
+        if (/\.zip$/i.test(f.rel)) { zips.push(f); return; }
         src.add(f.rel, null, function () { return fs.promises.readFile(f.full); });
       })(files[i]);
     }
-    return { src: src, close: function () {} };
+    for (var z = 0; z < zips.length; z++) {
+      await (async function (zf) {
+        try {
+          var zr2 = await ZipReader.open(zf.full);
+          zf.reader = zr2;
+          zr2.entries.forEach(function (e) {
+            if (/\/$/.test(e.name) || /^__MACOSX\//.test(e.name) || /(^|\/)(\._|\.DS_Store)/.test(e.name)) return;
+            src.add(zf.rel + '/' + e.name, e.usize, function () { return zr2.read(e); });
+          });
+        } catch (x) { /* zip illeggibile: lo salto */ }
+      })(zips[z]);
+    }
+    return { src: src, close: function () { return Promise.all(zips.map(function (f) { return f.reader ? f.reader.close() : null; })); } };
   }
   if (/\.zip$/i.test(p)) {
     var zr = await ZipReader.open(p);
@@ -169,8 +184,9 @@ class ChatView extends obsidian.ItemView {
       this.opened = await openSource(s.source);
       var chats = await Reader.detectChats(this.opened.src, this.plugin.meStore(), say);
       if (!chats.length) {
+        var seen = this.opened.src.entries.map(function (en) { return en.path; }), more = seen.length > 12 ? '\n… e altri ' + (seen.length - 12) : '';
         this.teardown();
-        this.status('<div><b>Non ho trovato chat WhatsApp o Telegram in:</b><pre>' + escHtml(s.source) + '</pre></div>');
+        this.status('<div><b>Non ho trovato chat WhatsApp o Telegram in:</b><pre>' + escHtml(s.source) + '</pre><b>Contenuto trovato (' + seen.length + ' file):</b><pre>' + escHtml(seen.slice(0, 12).join('\n') + more || '(vuoto)') + '</pre></div>');
         return;
       }
       this.plugin.remember(s.source, chats);
