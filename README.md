@@ -25,6 +25,7 @@ Chat exports are a pile of `.txt` files and loose media. Parley turns them back 
 - **Media**: photos, video, audio and voice notes, documents, links, with a lightbox (arrow keys to move through).
 - **Gallery** with separate tabs: Photos and video, GIFs and stickers, Documents, Links.
 - **Search** inside a chat (`Cmd/Ctrl+F`) and jump to a date.
+- **Library folders**: add a folder full of exports (zips and plain folders mixed); duplicates of the same chat are merged.
 - **Home** with your library folders and recent chats, pick "which one am I" per chat.
 - Light and dark, follows your Obsidian theme.
 

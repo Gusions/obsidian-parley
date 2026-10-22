@@ -204,6 +204,7 @@ Module._load = function (req, ...rest) { return req === 'obsidian' ? obsidianStu
   fs.mkdirSync(lib);
   fs.copyFileSync(zipPath, path.join(lib, 'Chat WhatsApp con Anna.zip'));
   fs.cpSync(tgDir, path.join(lib, 'Gruppo Calcetto'), { recursive: true });
+  fs.mkdirSync(path.join(lib, 'Anna'));                         // stessa chat già in zip: un'unica card
   fs.writeFileSync(path.join(lib, 'note.pdf'), 'x');           // ignorato
   fs.writeFileSync(path.join(lib, '.nascosto.zip'), 'x');      // ignorato
   const hl = { view: null };
@@ -222,6 +223,7 @@ Module._load = function (req, ...rest) { return req === 'obsidian' ? obsidianStu
   assert.strictEqual(secs.length, 2, 'recenti + libreria');
   assert.strictEqual(secs[1].querySelectorAll('.pl-card').length, 2, 'libreria: zip + cartella, niente pdf né file nascosti');
   assert.ok(/Anna/.test(secs[1].textContent) && /Gruppo Calcetto/.test(secs[1].textContent));
+  assert.ok(/\+1 copia/.test(secs[1].textContent), 'doppione cartella+zip unito: ' + secs[1].textContent);
   // filtro
   hv.input.value = 'calcetto'; hv.input.dispatchEvent(new w.Event('input'));
   assert.strictEqual(hc.querySelectorAll('.pl-card').length, 2, 'filtro: 1 recente + 1 libreria');

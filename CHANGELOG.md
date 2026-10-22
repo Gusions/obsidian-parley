@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.5
+- Library folders: the same chat present as both a folder and a zip (or several copies) is shown once, the most recent, with a "+1 copy" note.
+
 ## 0.4.4
 - Scroll anchoring: the top message stays put while images load or fail, so the view no longer drifts down on its own.
 

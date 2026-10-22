@@ -78,8 +78,25 @@ async function scanLibrary(dir) {
     try { mt = (await fs.promises.stat(full)).mtimeMs; } catch (e) { /* ignore */ }
     items.push({ source: full, kind: kind, ts: mt });
   }
+  /* stessa chat presente sia come cartella sia come zip (o più copie): ne mostro una sola, la più recente */
+  var byKey = new Map();
+  items.forEach(function (it) {
+    var k = dedupeKey(it.source);
+    var cur = byKey.get(k);
+    if (!cur) { it.alt = []; byKey.set(k, it); return; }
+    var keep = it.ts > cur.ts ? it : cur, drop = keep === it ? cur : it;
+    keep.alt = (keep.alt || []).concat(drop.alt || [], [drop.source]);
+    byKey.set(k, keep);
+  });
+  items = Array.from(byKey.values());
   items.sort(function (a, b) { return b.ts - a.ts; });
   return items;
+}
+function dedupeKey(p) {
+  var n = path.basename(p).replace(/\.(zip|txt|json)$/i, '');
+  n = lowerNorm(n).replace(/whatsapp chat with|chat whatsapp con|chat di whatsapp con|telegram chat|chatexport[_ ]*/g, '')
+    .replace(/\(\d+\)\s*$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  return n || lowerNorm(path.basename(p));
 }
 
 /* ---------- selezione file/cartella (dialogo di sistema) ---------- */
@@ -279,9 +296,9 @@ class HomeView extends obsidian.ItemView {
     el(card, 'div', 'pl-card-av', (d.name.match(/[\p{L}\p{N}]/u) || ['?'])[0]);
     var body = el(card, 'div', 'pl-card-body');
     el(body, 'div', 'pl-card-name', d.name);
-    el(body, 'div', 'pl-card-meta', d.line);
+    el(body, 'div', 'pl-card-meta', d.line + (item.alt && item.alt.length ? ' · +' + item.alt.length + ' copia' + (item.alt.length > 1 ? 'e' : '') : ''));
     el(card, 'div', 'pl-card-when', d.when);
-    card.title = item.source;
+    card.title = item.source + (item.alt && item.alt.length ? '\n\nAnche in:\n' + item.alt.join('\n') : '');
     var open = function () { self.plugin.openPath(item.source, { here: true }); };
     card.addEventListener('click', open);
     card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
