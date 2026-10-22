@@ -353,22 +353,34 @@ function createReader(root, opts) {
     }
     r.querySelectorAll('img[data-lazy]').forEach(function (img) { io.observe(img); });
   }
+  /* ancora di scroll: ricordo quale messaggio sta in cima e a che altezza; se un'immagine cambia le altezze
+     (caricamento, errore) rimetto quel messaggio dov'era, così la vista non "scende da sola" */
+  var anc = { row: null, off: 0, top: -1 };
+  function saveAnchor() {
+    var mt = el.msgs.getBoundingClientRect().top, rows = el.rows.children;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i].getBoundingClientRect();
+      if (r.bottom > mt + 1 && rows[i].dataset && rows[i].dataset.i !== undefined) { anc.row = rows[i]; anc.off = r.top - mt; anc.top = el.msgs.scrollTop; return; }
+    }
+    anc.row = null;
+  }
+  function fixAnchor() {
+    if (destroyed || !anc.row || !anc.row.isConnected) return;
+    if (Math.abs(el.msgs.scrollTop - anc.top) > 1) { saveAnchor(); return; }
+    var d = anc.row.getBoundingClientRect().top - el.msgs.getBoundingClientRect().top - anc.off;
+    if (Math.abs(d) > 0.5) { el.msgs.scrollTop += d; anc.top = el.msgs.scrollTop; }
+  }
   function loadImg(img) {
     var box = img.closest('.m'), c = st.cur; if (!box || !c) return;
     var md = c.messages[+box.dataset.i].media[+box.dataset.k];
     blobUrl(c, md).then(function (u) {
       if (!u) return;
       img.onerror = function () {
-        box.className = 'm doc';
+        box.className = 'm doc'; setTimeout(fixAnchor, 0);
         box.innerHTML = '<span class="ic">' + ic('file') + '</span><div class="info"><b>' + esc(md.name || 'immagine') + '</b><span>Anteprima non disponibile · clic per scaricare</span></div>';
         diag(c, md).then(function (t) { var s = box.querySelector('.info span'); if (s) s.textContent = t; });
       };
-      /* le immagini sopra la vista, caricandosi, spingerebbero giù il contenuto: compenso lo scroll */
-      var h0 = box.offsetHeight, above = box.offsetTop + h0 <= el.msgs.scrollTop;
-      img.addEventListener('load', function () {
-        var d = box.offsetHeight - h0;
-        if (above && d) el.msgs.scrollTop += d;
-      }, { once: true });
+      img.addEventListener('load', fixAnchor, { once: true });
       img.removeAttribute('data-lazy'); img.src = u;
     });
   }
@@ -424,7 +436,7 @@ function createReader(root, opts) {
       var a = el.rows.querySelector('[data-i="' + anchor + '"]');
       if (a) el.msgs.scrollTop = a.offsetTop - 60;
     }
-    updateJump();
+    updateJump(); saveAnchor();
   }
   function firstVisible() {
     var rows = el.rows.children, top = el.msgs.scrollTop;
@@ -465,6 +477,7 @@ function createReader(root, opts) {
       else if (gap < 800 && st.win.end < c.messages.length) loadDown();
       updateJump();
       updateDayChip();
+      saveAnchor();
     });
   }
   /* data fluttuante come su iMessage/WhatsApp: mostra il giorno del primo messaggio visibile mentre scorri */

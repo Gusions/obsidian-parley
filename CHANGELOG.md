@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.4
+- Scroll anchoring: the top message stays put while images load or fail, so the view no longer drifts down on its own.
+
 ## 0.4.3
 - Fix Telegram chats: stray spaces and blank lines in message text made bubbles oversized.
 - Fix the view jumping down while scrolling up (images loading above the viewport).
