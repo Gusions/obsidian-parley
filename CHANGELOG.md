@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.6
+- Opening a folder that holds many chats (no chat file at its top level, one sub-folder or zip per chat) now adds it as a library, one card per chat named after its folder, instead of merging everything into a single chat.
+
 ## 0.4.5
 - Library folders: the same chat present as both a folder and a zip (or several copies) is shown once, the most recent, with a "+1 copy" note.
 

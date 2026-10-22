@@ -62,6 +62,20 @@ async function openSource(p) {
   return { src: src, close: function () {} };
 }
 
+/* una cartella "contenitore" non è una chat: non ha file di chat al primo livello ma contiene più cartelle/zip (una per chat) */
+async function isChatContainer(dir) {
+  var list;
+  try { list = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (e) { return false; }
+  var kids = 0;
+  for (var i = 0; i < list.length; i++) {
+    var d = list[i];
+    if (d.name.charAt(0) === '.') continue;
+    if (d.isFile() && /\.(txt|json|html?)$/i.test(d.name)) return false;
+    if (d.isDirectory() || (d.isFile() && /\.zip$/i.test(d.name))) kids++;
+  }
+  return kids >= 2;
+}
+
 /* elenco di una cartella-libreria: un livello, solo cartelle / zip / txt / json */
 async function scanLibrary(dir) {
   var list = await fs.promises.readdir(dir, { withFileTypes: true });
@@ -434,7 +448,14 @@ class ParleyPlugin extends obsidian.Plugin {
     this.refreshHomes();
   }
   async openPath(p, opts) {
-    try { await fs.promises.stat(p); } catch (e) { new obsidian.Notice('Percorso non trovato: ' + p); return; }
+    var pst;
+    try { pst = await fs.promises.stat(p); } catch (e) { new obsidian.Notice('Percorso non trovato: ' + p); return; }
+    if (pst.isDirectory() && await isChatContainer(p)) {
+      /* cartella con tante chat dentro: la tratto come libreria (una card per chat) invece di fonderle in una sola */
+      await this.addLibrary(p);
+      await this.activateHome(opts && opts.here ? opts.fromLeaf || null : null);
+      return;
+    }
     var name = stripExt(path.basename(p));
     this.data.recent = [{ source: p, name: name, ts: Date.now() }].concat((this.data.recent || []).filter(function (r) { return r.source !== p; })).slice(0, 8);
     await this.savePlugin();

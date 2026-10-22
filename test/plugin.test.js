@@ -239,6 +239,13 @@ Module._load = function (req, ...rest) { return req === 'obsidian' ? obsidianStu
   hc.querySelector('.pl-card-x').click(); await sleep(20);
   assert.strictEqual(plugin.data.recent.length, nRec - 1, 'recente rimosso');
   assert.ok(fs.existsSync(zipPath) && fs.existsSync(tgDir), 'rimuovere dai recenti non tocca i file');
+  // "Apri cartella" su una cartella che contiene più chat (niente file di chat al primo livello) → libreria, non un'unica chat
+  const cont = path.join(tmp, 'conversazioni'); fs.mkdirSync(path.join(cont, 'Camilla Tirelli'), { recursive: true }); fs.mkdirSync(path.join(cont, 'Chiara Arena'));
+  leafStates.length = 0;
+  await plugin.openPath(cont, { here: true }); await sleep(50);
+  assert.ok(plugin.data.libraries.includes(cont), 'cartella contenitore aggiunta come libreria');
+  assert.ok(!leafStates.some((x) => x.type === 'parley-view'), 'nessuna chat unica aperta');
+  await plugin.removeLibrary(cont); await sleep(20);
   // libreria mancante → messaggio, rimozione libreria
   await plugin.addLibrary(path.join(tmp, 'sparita')); await sleep(30);
   assert.ok(/Cartella non trovata/.test(hc.textContent));
