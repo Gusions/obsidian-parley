@@ -122,6 +122,10 @@ async function readText(entry) {
 /* ---------- rilevamento chat in una sorgente ---------- */
 function buildChat(o, store) {
   var msgs = o.messages, byId = new Map();
+  /* ordine cronologico garantito (anche se l'export mescola file/pagine): ordinamento stabile per data */
+  var sorted = true;
+  for (var si = 1; si < msgs.length; si++) if (msgs[si].ts < msgs[si - 1].ts) { sorted = false; break; }
+  if (!sorted) msgs = msgs.map(function (m, k) { return { m: m, k: k }; }).sort(function (a, b) { return (a.m.ts - b.m.ts) || (a.k - b.k); }).map(function (x) { return x.m; });
   msgs.forEach(function (m, i) { m.i = i; byId.set(m.id, i); });
   var group = o.type ? !/personal_chat|saved_messages|bot_chat/.test(o.type) : o.participants.length > 2;
   var chat = {

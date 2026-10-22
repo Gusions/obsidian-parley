@@ -250,6 +250,15 @@ Module._load = function (req, ...rest) { return req === 'obsidian' ? obsidianStu
   const nest = path.join(tmp, 'Persona Annidata'); fs.mkdirSync(nest); fs.copyFileSync(zipPath, path.join(nest, 'export.zip'));
   const ns = mkView(); await ns.setState({ source: nest }, {}); await sleep(400);
   assert.ok(!/Non ho trovato/.test(ns.contentEl.textContent || '') && /Anna|Chat/.test(ns.contentEl.textContent || ''), 'zip annidato letto: ' + (ns.contentEl.textContent || '').slice(0, 200));
+  // messaggi fuori ordine nell'export → mostrati in ordine cronologico
+  const unordered = path.join(tmp, 'FuoriOrdine'); fs.mkdirSync(unordered);
+  fs.writeFileSync(path.join(unordered, 'result.json'), JSON.stringify({ name: 'Tizio', type: 'personal_chat', id: 1, messages: [
+    { id: 3, type: 'message', date: '2024-03-03T10:00:00', from: 'Tizio', from_id: 'user1', text: 'terzo', text_entities: [{ type: 'plain', text: 'terzo' }] },
+    { id: 1, type: 'message', date: '2024-03-01T10:00:00', from: 'Tizio', from_id: 'user1', text: 'primo', text_entities: [{ type: 'plain', text: 'primo' }] },
+    { id: 2, type: 'message', date: '2024-03-02T10:00:00', from: 'Tizio', from_id: 'user1', text: 'secondo', text_entities: [{ type: 'plain', text: 'secondo' }] } ] }));
+  const uv = mkView(); await uv.setState({ source: unordered }, {}); await sleep(400);
+  const utxt = Array.from(uv.contentEl.querySelectorAll('.txt')).map((n) => n.textContent).join(',');
+  assert.strictEqual(utxt, 'primo,secondo,terzo', 'ordine cronologico: ' + utxt);
   // libreria mancante → messaggio, rimozione libreria
   await plugin.addLibrary(path.join(tmp, 'sparita')); await sleep(30);
   assert.ok(/Cartella non trovata/.test(hc.textContent));

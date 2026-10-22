@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.8
+- Messages (and therefore photos) are always shown in chronological order, even if the export lists them out of order.
+
 ## 0.4.7
 - A chat folder that contains a zip (e.g. `Name/Name.zip`) is now read through the inner zip.
 - When no chat is found, the error lists what was found in the folder, to make odd exports easy to diagnose.
