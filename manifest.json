@@ -1,8 +1,8 @@
 {
   "id": "parley",
   "name": "Parley",
-  "version": "0.4.10",
-  "minAppVersion": "1.5.0",
+  "version": "0.4.11",
+  "minAppVersion": "1.0.0",
   "description": "Rileggi le chat WhatsApp e Telegram esportate (zip o cartella) in un lettore elegante, con media, ricerca e salto a data. Legge dal disco, non copia nulla nel vault.",
   "author": "@gusions",
   "authorUrl": "https://github.com/Gusions",

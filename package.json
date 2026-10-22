@@ -1,6 +1,6 @@
 {
   "name": "obsidian-parley",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "Reread exported WhatsApp and Telegram chats as real conversations, inside Obsidian. Reads from disk, copies nothing into your vault.",
   "private": true,
   "author": "@gusions",

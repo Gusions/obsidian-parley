@@ -41,7 +41,7 @@ How to export: WhatsApp, open a chat, More, Export chat, Include media. Telegram
 
 ## Install
 
-Parley is desktop only (Obsidian 1.5.0 or newer).
+Parley is desktop only (Obsidian 1.0 or newer).
 
 **Manual**
 1. Download `parley-<version>.zip` from the latest release.

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.11
+- Minimum Obsidian version lowered to 1.0.0.
+
 ## 0.4.10
 - Home header: more breathing room (letter spacing of the title, gap after the logo, space before the search field).
 
