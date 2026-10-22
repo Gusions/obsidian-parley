@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3
+- Fix Telegram chats: stray spaces and blank lines in message text made bubbles oversized.
+- Fix the view jumping down while scrolling up (images loading above the viewport).
+
 ## 0.4.2
 - Home redesigned in a macOS Messages style, logo next to the name.
 - Back navigation: chevron button and `Cmd+[`.

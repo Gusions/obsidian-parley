@@ -187,6 +187,17 @@
       return o;
     });
   }
+  /* toglie spazi/a capo di testa e coda (e li comprime nell'HTML): altrimenti pre-wrap li mostra come righe vuote */
+  function cleanEntities(ents, collapse) {
+    var out = ents.filter(function (e) { return e.s !== ''; }).map(function (e) {
+      var s = e.s.replace(/\r\n?/g, '\n');
+      if (collapse && e.t !== 'pre' && e.t !== 'code') s = s.replace(/[ \t\n]+/g, function (w) { return w.indexOf('\n') >= 0 && e.br ? w : ' '; });
+      return Object.assign({}, e, { s: s });
+    });
+    if (out.length) out[0].s = out[0].s.replace(/^\s+/, '');
+    if (out.length) out[out.length - 1].s = out[out.length - 1].s.replace(/\s+$/, '');
+    return out.filter(function (e) { return e.s !== ''; });
+  }
   function entitiesPlain(ents) { return ents.map(function (e) { return e.s; }).join(''); }
 
   function tgService(m) {
@@ -240,7 +251,7 @@
       }).join('\n'));
     }
     if (extra.length) ents.push({ t: 'plain', s: (ents.length ? '\n' : '') + extra.join('\n') });
-    out.entities = ents;
+    out.entities = cleanEntities(ents, false);
     out.text = '';
     out.plain = entitiesPlain(ents);
 
@@ -308,7 +319,7 @@
       if (ch.nodeType === 3) { if (ch.nodeValue) out.push({ t: style || 'plain', s: ch.nodeValue }); }
       else if (ch.nodeType === 1) {
         var tag = ch.tagName.toLowerCase(), st = style;
-        if (tag === 'br') { out.push({ t: 'plain', s: '\n' }); continue; }
+        if (tag === 'br') { out.push({ t: 'plain', s: '\n', br: true }); continue; }
         if (tag === 'a') {
           var href = ch.getAttribute('href') || '';
           if (/^(https?:|mailto:|tel:)/i.test(href)) out.push({ t: 'link', s: ch.textContent, href: href });
@@ -376,7 +387,7 @@
         var ents = [];
         var textEl = body.querySelector(':scope > .text, :scope > .forwarded .text');
         if (textEl) htmlToEntities(textEl, ents, null);
-        msg.entities = ents; msg.text = ''; msg.plain = entitiesPlain(ents);
+        ents = cleanEntities(ents, true); msg.entities = ents; msg.text = ''; msg.plain = entitiesPlain(ents);
         var rep = body.querySelector('.reply_to a[href]');
         if (rep) { var rm = /go_to_message(\d+)/.exec(rep.getAttribute('href') + ' ' + (rep.getAttribute('onclick') || '')); if (rm) msg.replyTo = +rm[1]; }
         var fw = body.querySelector('.forwarded .from_name');

@@ -363,6 +363,12 @@ function createReader(root, opts) {
         box.innerHTML = '<span class="ic">' + ic('file') + '</span><div class="info"><b>' + esc(md.name || 'immagine') + '</b><span>Anteprima non disponibile · clic per scaricare</span></div>';
         diag(c, md).then(function (t) { var s = box.querySelector('.info span'); if (s) s.textContent = t; });
       };
+      /* le immagini sopra la vista, caricandosi, spingerebbero giù il contenuto: compenso lo scroll */
+      var h0 = box.offsetHeight, above = box.offsetTop + h0 <= el.msgs.scrollTop;
+      img.addEventListener('load', function () {
+        var d = box.offsetHeight - h0;
+        if (above && d) el.msgs.scrollTop += d;
+      }, { once: true });
       img.removeAttribute('data-lazy'); img.src = u;
     });
   }
@@ -397,7 +403,7 @@ function createReader(root, opts) {
     }
     m.media.forEach(function (md, k) { body += mediaHTML(chat, i, k, md); });
     var txt = m.entities ? fmtEntities(m.entities) : fmtWa(m.text || '');
-    if ((m.plain || '').trim() || m.entities) {
+    if ((m.plain || '').trim() || (m.entities && m.entities.length)) {
       var emoji = EMOJI_ONLY && !m.media.length && EMOJI_ONLY.test((m.plain || '').trim());
       body += '<div class="txt' + (emoji ? ' emoji' : '') + (m.deleted ? ' deleted' : '') + '">' + highlight(txt, st.q) + '</div>';
     }
